@@ -52,7 +52,13 @@ Le fichier `render.yaml` est deja configure pour un deploy Blueprint de ces 3 re
 - Test API: `https://<backend>.onrender.com/api/quotes`
 - WebSocket: verifie l'etat `LIVE` dans l'UI
 
-## 6) Recommandations de production
+## 6) Erreur build pandas / Python 3.14
+
+Si le build echoue sur la compilation de `pandas` avec `cpython-314`, Render utilise Python 3.14 par defaut.
+Le projet impose **Python 3.11.9** via `runtime.txt` et `PYTHON_VERSION` dans `render.yaml`.
+Push ces fichiers puis redeploy.
+
+## 7) Recommandations de production
 
 - **Plan**: les plans free conviennent pour test/dev, mais peuvent "sleep".
 - **Redis**: garde Upstash en region proche (Frankfurt) pour latence reduite.

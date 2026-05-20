@@ -5,9 +5,12 @@ services:
     runtime: python
     region: frankfurt
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1
     envVars:
+      # Render utilise Python 3.14 par défaut : pandas/numpy ne compilent pas dessus
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: TWELVE_DATA_API_KEY
