@@ -92,7 +92,8 @@ def start_scheduler():
         name="Collecte données marché",
         replace_existing=True,
         max_instances=1,
-        misfire_grace_time=10,
+        misfire_grace_time=120,
+        coalesce=True,
     )
 
     # Recommandations toutes les 2 minutes

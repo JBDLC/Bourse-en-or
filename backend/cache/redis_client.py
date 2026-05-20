@@ -1,6 +1,6 @@
 """
 cache/redis_client.py — Client Redis async + cache mémoire local (toujours actif).
-Même si Redis échoue (TLS Render/Upstash), les cours restent visibles sur l'instance.
+Compatible redis-py 5.x (sans ssl_cert_reqs, incompatible avec Upstash sinon).
 """
 import json
 import ssl
@@ -15,6 +15,7 @@ from backend.config import settings
 _redis: Optional[aioredis.Redis] = None
 _redis_ok: bool = False
 _redis_last_error: Optional[str] = None
+_skip_pubsub: bool = False
 _memory: dict[str, tuple[Any, float]] = {}
 
 
@@ -53,7 +54,7 @@ def _redis_url_hint() -> dict:
 
 
 async def _connect_redis() -> aioredis.Redis:
-    """Tente plusieurs modes de connexion Upstash."""
+    """Connexion Upstash — redis-py 5.x (pas de ssl_cert_reqs)."""
     url = _normalize_redis_url(settings.REDIS_URL or "")
     if not url:
         raise ConnectionError("REDIS_URL vide")
@@ -62,37 +63,34 @@ async def _connect_redis() -> aioredis.Redis:
 
     errors: list[str] = []
 
-    # Méthode 1 : from_url (recommandé Upstash)
+    # Méthode 1 : from_url simple (rediss:// gère TLS automatiquement)
     try:
         client = await aioredis.from_url(
             url,
             encoding="utf-8",
             decode_responses=True,
-            ssl_cert_reqs=ssl.CERT_NONE,
         )
         await client.ping()
         return client
     except Exception as e:
         errors.append(f"from_url: {e}")
 
-    # Méthode 2 : connexion explicite host/port
-    parsed = urlparse(url)
-    try:
-        use_ssl = parsed.scheme == "rediss"
-        client = aioredis.Redis(
-            host=parsed.hostname,
-            port=parsed.port or 6379,
-            username=parsed.username or "default",
-            password=parsed.password,
-            ssl=use_ssl,
-            ssl_cert_reqs=ssl.CERT_NONE if use_ssl else None,
-            encoding="utf-8",
-            decode_responses=True,
-        )
-        await client.ping()
-        return client
-    except Exception as e:
-        errors.append(f"host/port: {e}")
+    # Méthode 2 : contexte SSL explicite (redis-py 5)
+    if url.startswith("rediss://"):
+        try:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            client = await aioredis.from_url(
+                url,
+                encoding="utf-8",
+                decode_responses=True,
+                ssl=ctx,
+            )
+            await client.ping()
+            return client
+        except Exception as e:
+            errors.append(f"ssl_context: {e}")
 
     raise ConnectionError(" | ".join(errors))
 
@@ -108,17 +106,15 @@ async def get_redis() -> aioredis.Redis:
 
 
 async def cache_set(key: str, value: Any, ttl: int = 60) -> bool:
-    """Toujours en mémoire ; Redis en plus si disponible."""
     _memory_set(key, value, ttl)
     try:
         r = await get_redis()
         await r.setex(key, ttl, json.dumps(value, default=str))
-        global _redis_ok
         _redis_ok = True
+        _redis_last_error = None
     except Exception as e:
-        global _redis_last_error
         _redis_last_error = str(e)
-        logger.warning(f"Redis SET ignoré [{key}]: {e}")
+        logger.debug(f"Redis SET [{key}]: {e}")
     return True
 
 
@@ -133,7 +129,7 @@ async def cache_get(key: str) -> Optional[Any]:
             return None
         return json.loads(data)
     except Exception as e:
-        logger.warning(f"Redis GET [{key}]: {e}")
+        logger.debug(f"Redis GET [{key}]: {e}")
         return None
 
 
@@ -148,12 +144,14 @@ async def cache_delete(key: str) -> bool:
 
 
 async def publish(channel: str, message: Any) -> bool:
+    if _skip_pubsub or not _redis_ok:
+        return False
     try:
         r = await get_redis()
         await r.publish(channel, json.dumps(message, default=str))
         return True
     except Exception as e:
-        logger.debug(f"Redis PUBLISH ignoré: {e}")
+        logger.debug(f"Redis PUBLISH: {e}")
         return False
 
 
@@ -182,8 +180,9 @@ def _signals_from_memory() -> dict:
 
 
 async def get_all_quotes() -> dict:
-    """Mémoire d'abord, puis Redis."""
     result = _quotes_from_memory()
+    if not _redis_ok:
+        return result
     try:
         r = await get_redis()
         keys = await r.keys("quote:*")
@@ -200,6 +199,8 @@ async def get_all_quotes() -> dict:
 
 async def get_all_signals() -> dict:
     result = _signals_from_memory()
+    if not _redis_ok:
+        return result
     try:
         r = await get_redis()
         keys = await r.keys("signal:*")
@@ -219,6 +220,8 @@ def get_redis_diagnostic() -> dict:
     return {
         **hint,
         "last_error": _redis_last_error,
+        "redis_ok": _redis_ok,
+        "pubsub_paused": _skip_pubsub,
         "memory_keys": len(_memory),
         "memory_quotes": len(_quotes_from_memory()),
     }
@@ -229,6 +232,9 @@ async def redis_ping() -> bool:
     url = _normalize_redis_url(settings.REDIS_URL or "")
     if not url:
         _redis_last_error = "REDIS_URL non définie"
+        return False
+    if url.startswith("https://"):
+        _redis_last_error = "Mauvaise URL REST https://"
         return False
     try:
         if _redis is None:
@@ -243,16 +249,30 @@ async def redis_ping() -> bool:
         _redis_ok = False
         if _redis:
             try:
-                await _redis.close()
+                await _redis.aclose()
             except Exception:
                 pass
             _redis = None
         return False
 
 
+def disable_redis_pubsub() -> None:
+    """Pause le listener pub/sub (évite le spam de logs si Redis HS)."""
+    global _skip_pubsub
+    _skip_pubsub = True
+
+
+def enable_redis_pubsub() -> None:
+    global _skip_pubsub
+    _skip_pubsub = False
+
+
 async def close_redis():
     global _redis, _redis_ok
     if _redis:
-        await _redis.close()
+        try:
+            await _redis.aclose()
+        except Exception:
+            pass
         _redis = None
     _redis_ok = False

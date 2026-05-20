@@ -17,7 +17,7 @@ from backend.config import settings
 from backend.scheduler import start_scheduler, stop_scheduler
 from backend.cache.redis_client import (
     get_redis, close_redis, cache_get, get_all_quotes, get_all_signals,
-    redis_ping, get_redis_diagnostic,
+    redis_ping, get_redis_diagnostic, disable_redis_pubsub,
 )
 from backend.scheduler import collect_stats
 from backend.collectors.market_data import fetch_indices, TICKER_NAMES
@@ -61,7 +61,15 @@ manager = ConnectionManager()
 
 async def redis_listener():
     """Écoute Redis pub/sub et diffuse aux clients WebSocket connectés."""
+    await asyncio.sleep(3)
     while True:
+        if not await redis_ping():
+            disable_redis_pubsub()
+            logger.warning("Redis pub/sub en pause — re-test dans 60s")
+            await asyncio.sleep(60)
+            continue
+        from backend.cache.redis_client import enable_redis_pubsub
+        enable_redis_pubsub()
         try:
             r = await get_redis()
             pubsub = r.pubsub()
@@ -77,8 +85,9 @@ async def redis_listener():
                         pass
 
         except Exception as e:
-            logger.error(f"Redis listener erreur: {e}")
-            await asyncio.sleep(5)  # reconnexion auto
+            logger.warning(f"Redis listener: {e}")
+            disable_redis_pubsub()
+            await asyncio.sleep(60)
 
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -89,9 +98,9 @@ async def lifespan(app: FastAPI):
 
     ok = await redis_ping()
     if not ok:
+        disable_redis_pubsub()
         logger.warning(
-            "Redis injoignable — vérifiez REDIS_URL (Upstash rediss://...). "
-            "Mode mémoire local activé pour les cours."
+            "Redis injoignable — cache mémoire actif. Vérifiez REDIS_URL (rediss:// Upstash TCP)."
         )
 
     # Démarrer le scheduler de collecte

@@ -7,6 +7,7 @@ import json
 import asyncio
 from datetime import datetime, timezone
 from typing import Optional
+import httpx
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -17,7 +18,10 @@ from loguru import logger
 
 from backend.config import settings
 from backend.cache.redis_client import cache_set, cache_get
+from backend.collectors.news import _to_finnhub_ticker
 from backend.models.schemas import Quote, TechnicalIndicators, Signal, SignalType
+
+FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
 
 
 def _load_tickers() -> list[dict]:
@@ -341,6 +345,75 @@ async def fetch_indices() -> list[dict]:
     return indices
 
 
+def _build_minimal_quote(ticker: str, price: float, change: float, change_pct: float) -> dict:
+    """Cours simplifié (Finnhub) quand yfinance est bloqué sur le cloud."""
+    return {
+        "ticker": ticker,
+        "name": TICKER_NAMES.get(ticker, ticker),
+        "price": round(price, 2),
+        "change": round(change, 2),
+        "change_pct": round(change_pct, 3),
+        "volume": 0,
+        "volume_avg_20d": 0,
+        "volume_ratio": 1.0,
+        "currency": "EUR",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "is_open": True,
+        "indicators": {},
+        "signal": "NEUTRAL",
+        "score": 50,
+        "score_breakdown": {},
+        "source": "finnhub",
+    }
+
+
+async def _fetch_finnhub_quote(ticker: str) -> Optional[dict]:
+    """Cours temps réel via Finnhub (fallback Render quand Yahoo bloque)."""
+    if not settings.FINNHUB_API_KEY:
+        return None
+    symbol = _to_finnhub_ticker(ticker)
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            resp = await client.get(
+                f"{FINNHUB_BASE_URL}/quote",
+                params={"symbol": symbol, "token": settings.FINNHUB_API_KEY},
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+        price = data.get("c") or 0
+        if not price:
+            return None
+        prev = data.get("pc") or price
+        change = price - prev
+        change_pct = data.get("dp") if data.get("dp") is not None else (
+            (change / prev * 100) if prev else 0
+        )
+        return _build_minimal_quote(ticker, float(price), float(change), float(change_pct))
+    except Exception as e:
+        logger.debug(f"Finnhub quote {ticker}: {e}")
+        return None
+
+
+async def _finnhub_fallback_batch(missing: list[str]) -> dict:
+    """Complète les tickers manquants via Finnhub (max 5 en parallèle)."""
+    sem = asyncio.Semaphore(5)
+    out: dict = {}
+
+    async def one(t: str):
+        async with sem:
+            q = await _fetch_finnhub_quote(t)
+            if q:
+                await _cache_quote_result(q)
+                out[t] = q
+            await asyncio.sleep(0.12)
+
+    await asyncio.gather(*[one(t) for t in missing])
+    if out:
+        logger.info(f"Finnhub fallback : {len(out)}/{len(missing)} tickers")
+    return out
+
+
 async def collect_all() -> dict:
     """
     Collecte tous les tickers par lots yfinance groupés (moins de requêtes, plus fiable sur Render).
@@ -374,6 +447,11 @@ async def collect_all() -> dict:
 
         if i + batch_size < len(symbols):
             await asyncio.sleep(1)
+
+    missing = [t for t in symbols if t not in all_results]
+    if missing and settings.FINNHUB_API_KEY:
+        finnhub_data = await _finnhub_fallback_batch(missing)
+        all_results.update(finnhub_data)
 
     logger.info(f"Collecte terminée : {len(all_results)}/{len(TICKERS)} tickers OK")
     return all_results

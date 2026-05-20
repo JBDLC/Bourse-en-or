@@ -32,6 +32,8 @@ services:
         value: 1d
       - key: MAX_TICKERS
         value: "25"
+      - key: REFRESH_INTERVAL_SECONDS
+        value: "60"
       # CORS : regex *.onrender.com activée dans le code + URL frontend exacte ici
       - key: FRONTEND_URL
         sync: false
