@@ -30,8 +30,7 @@ services:
   - type: web
     name: pea-trading-frontend
     runtime: static
-    region: frankfurt
-    plan: free
+    # Pas de `region` ni `plan` ici : les Static Sites Render ne les acceptent pas dans un Blueprint
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     envVars:
