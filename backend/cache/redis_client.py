@@ -108,6 +108,16 @@ async def get_all_signals() -> dict:
         return {}
 
 
+async def redis_ping() -> bool:
+    """Vérifie que Redis répond (diagnostic déploiement)."""
+    try:
+        r = await get_redis()
+        return bool(await r.ping())
+    except Exception as e:
+        logger.error(f"Redis PING error: {e}")
+        return False
+
+
 async def close_redis():
     """Ferme la connexion Redis proprement."""
     global _redis

@@ -10,17 +10,22 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 export default function MarketOverview() {
   const [indices, setIndices] = useState([])
   const [loading, setLoading] = useState(true)
+  const [apiError, setApiError] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       try {
+        setApiError(false)
         const res = await fetch(`${API_BASE}/api/indices`)
         if (res.ok) {
           const data = await res.json()
           setIndices(data.indices || [])
+        } else {
+          setApiError(true)
         }
       } catch (e) {
         console.error('Erreur chargement indices:', e)
+        setApiError(true)
       } finally {
         setLoading(false)
       }
@@ -59,7 +64,11 @@ export default function MarketOverview() {
       ))}
 
       {indices.length === 0 && (
-        <span className="text-xs text-text-muted">Chargement des indices...</span>
+        <span className="text-xs text-text-muted">
+          {apiError
+            ? 'Indices indisponibles (vérifiez CORS / URL backend)'
+            : 'Indices non disponibles (collecte en cours ou marché fermé)'}
+        </span>
       )}
     </div>
   )

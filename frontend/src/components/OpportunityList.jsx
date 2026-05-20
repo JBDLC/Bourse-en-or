@@ -13,7 +13,7 @@ export default function OpportunityList({ wsQuotes, onSelectTicker }) {
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
-  const [filter, setFilter] = useState('BUY') // ALL | BUY | NEUTRAL
+  const [filter, setFilter] = useState('ALL') // ALL | BUY | NEUTRAL
   const prevPrices = useRef({})
 
   // Fetch initial + refresh toutes les 2 minutes

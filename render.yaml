@@ -25,6 +25,11 @@ services:
         sync: false   # Depuis Upstash (gratuit)
       - key: ENVIRONMENT
         value: production
+      # yfinance 5m est souvent bloqué sur les IP cloud — 1j/6mo plus fiable
+      - key: YFINANCE_PERIOD
+        value: 6mo
+      - key: YFINANCE_INTERVAL
+        value: 1d
       - key: ALLOWED_ORIGINS
         value: '["https://pea-trading-frontend.onrender.com"]'
     healthCheckPath: /api/health

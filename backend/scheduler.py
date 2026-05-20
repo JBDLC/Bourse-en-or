@@ -8,12 +8,18 @@ from loguru import logger
 import asyncio
 
 from backend.config import settings
-from backend.collectors.market_data import collect_all
+from backend.collectors.market_data import collect_all, TICKERS
 from backend.analysis.recommender import build_recommendations
 from backend.cache.redis_client import publish, cache_set
 
 scheduler = AsyncIOScheduler()
 _last_data: dict = {}
+collect_stats: dict = {
+    "last_ok": 0,
+    "last_total": 0,
+    "last_at": None,
+    "last_error": None,
+}
 
 
 async def _collect_and_broadcast():
@@ -24,12 +30,17 @@ async def _collect_and_broadcast():
 
         # 1. Collecte des données
         data = await collect_all()
+        from datetime import datetime, timezone
+        collect_stats["last_at"] = datetime.now(timezone.utc).isoformat()
+        collect_stats["last_ok"] = len(data)
+        collect_stats["last_total"] = len(TICKERS)
+        collect_stats["last_error"] = None if data else "collecte vide (yfinance/Redis ?)"
+
         if not data:
             logger.warning("Collecte vide, pas de diffusion")
             return
 
         # 2. Publier les updates sur Redis pub/sub (pour les WebSockets)
-        from datetime import datetime, timezone
         message = {
             "type": "quote_update",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -51,6 +62,7 @@ async def _collect_and_broadcast():
         logger.debug(f"Collecte OK : {len(data)} tickers diffusés")
 
     except Exception as e:
+        collect_stats["last_error"] = str(e)
         logger.error(f"Erreur dans _collect_and_broadcast: {e}")
 
 

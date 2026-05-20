@@ -2,9 +2,10 @@
 config.py — Paramètres centralisés de l'application
 Toutes les variables d'environnement sont lues ici, nulle part ailleurs.
 """
-import os
+import json
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Union
 
 
 class Settings(BaseSettings):
@@ -67,6 +68,17 @@ class Settings(BaseSettings):
 
     # ── Rate limiting ─────────────────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 100
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """Render env: '["https://xxx.onrender.com"]' -> liste Python pour CORS."""
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("["):
+                return json.loads(v)
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
 
     class Config:
         env_file = ".env"

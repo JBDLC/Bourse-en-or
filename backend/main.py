@@ -15,7 +15,8 @@ import redis.asyncio as aioredis
 
 from backend.config import settings
 from backend.scheduler import start_scheduler, stop_scheduler
-from backend.cache.redis_client import get_redis, close_redis, cache_get, get_all_quotes, get_all_signals
+from backend.cache.redis_client import get_redis, close_redis, cache_get, get_all_quotes, get_all_signals, redis_ping
+from backend.scheduler import collect_stats
 from backend.collectors.market_data import fetch_indices, TICKER_NAMES
 from backend.analysis.recommender import build_recommendations, get_top_opportunities
 
@@ -85,6 +86,9 @@ async def lifespan(app: FastAPI):
 
     # Démarrer le scheduler de collecte
     start_scheduler()
+    from backend.scheduler import _collect_and_broadcast, _build_recommendations_job
+    asyncio.create_task(_collect_and_broadcast())
+    asyncio.create_task(_build_recommendations_job())
 
     # Démarrer le listener Redis en tâche de fond
     listener_task = asyncio.create_task(redis_listener())
@@ -119,7 +123,28 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+    quotes = await get_all_quotes()
+    redis_ok = await redis_ping()
+    return {
+        "status": "ok",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "redis": redis_ok,
+        "quotes_cached": len(quotes),
+        "collect": collect_stats,
+    }
+
+
+@app.get("/api/status")
+async def status():
+    """Diagnostic déploiement (collecte, Redis, cache)."""
+    quotes = await get_all_quotes()
+    return {
+        "redis_ok": await redis_ping(),
+        "quotes_cached": len(quotes),
+        "collect": collect_stats,
+        "tickers_configured": len(TICKER_NAMES),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @app.get("/api/quotes")
