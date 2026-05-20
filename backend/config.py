@@ -64,8 +64,11 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://pea-trading-frontend.onrender.com",
         "https://pea-frontend.onrender.com",
     ]
+    # URL exacte du frontend Render (ex: https://bourse-en-or-frontend.onrender.com)
+    FRONTEND_URL: str = ""
 
     # ── Rate limiting ─────────────────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 100
@@ -104,6 +107,13 @@ class Settings(BaseSettings):
                 return json.loads(v)
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @model_validator(mode="after")
+    def append_frontend_url(self) -> "Settings":
+        """Ajoute FRONTEND_URL aux origines CORS si renseignée."""
+        if self.FRONTEND_URL and self.FRONTEND_URL not in self.ALLOWED_ORIGINS:
+            self.ALLOWED_ORIGINS = [*self.ALLOWED_ORIGINS, self.FRONTEND_URL]
+        return self
 
     class Config:
         env_file = ".env"

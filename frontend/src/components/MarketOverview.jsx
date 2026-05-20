@@ -4,8 +4,7 @@
  */
 import { useEffect, useState } from 'react'
 import { fmt, variationColor } from '../utils/formatters'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { getApiBase } from '../config/api'
 
 export default function MarketOverview() {
   const [indices, setIndices] = useState([])
@@ -16,7 +15,8 @@ export default function MarketOverview() {
     const load = async () => {
       try {
         setApiError(false)
-        const res = await fetch(`${API_BASE}/api/indices`)
+        const apiBase = getApiBase()
+        const res = await fetch(`${apiBase}/api/indices`)
         if (res.ok) {
           const data = await res.json()
           setIndices(data.indices || [])
@@ -66,7 +66,7 @@ export default function MarketOverview() {
       {indices.length === 0 && (
         <span className="text-xs text-text-muted">
           {apiError
-            ? 'Indices indisponibles (vérifiez CORS / URL backend)'
+            ? `API inaccessible (${getApiBase()}) — redeploy frontend avec VITE_API_URL`
             : 'Indices non disponibles (collecte en cours ou marché fermé)'}
         </span>
       )}

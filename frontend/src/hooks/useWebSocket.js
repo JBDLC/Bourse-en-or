@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
+import { getWsUrl } from '../config/api'
 const RECONNECT_DELAY = 5000
 
 export function useWebSocket() {
@@ -24,7 +24,7 @@ export function useWebSocket() {
 
     try {
       setStatus('connecting')
-      ws.current = new WebSocket(WS_URL)
+      ws.current = new WebSocket(getWsUrl())
 
       ws.current.onopen = () => {
         if (!mountedRef.current) return

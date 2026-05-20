@@ -11,7 +11,7 @@ import { fmt, signalLabel, scoreColor, variationColor } from '../utils/formatter
 import SignalBadge from './SignalBadge'
 import { Sparkles, ExternalLink, X, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { getApiBase } from '../config/api'
 
 export default function TickerDetail({ ticker, onClose }) {
   const [data, setData] = useState(null)
@@ -25,8 +25,8 @@ export default function TickerDetail({ ticker, onClose }) {
     const load = async () => {
       try {
         const [quoteRes, newsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/quotes/${ticker}`),
-          fetch(`${API_BASE}/api/news/${ticker}`),
+          fetch(`${getApiBase()}/api/quotes/${ticker}`),
+          fetch(`${getApiBase()}/api/news/${ticker}`),
         ])
 
         if (quoteRes.ok) setData(await quoteRes.json())

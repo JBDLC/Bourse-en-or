@@ -7,7 +7,7 @@ import { fmt, variationColor } from '../utils/formatters'
 import SignalBadge from './SignalBadge'
 import { Plus, Trash2, Bell, BellOff } from 'lucide-react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { getApiBase } from '../config/api'
 
 export default function Watchlist({ wsQuotes, onSelectTicker }) {
   const [items, setItems] = useState([])
@@ -23,7 +23,7 @@ export default function Watchlist({ wsQuotes, onSelectTicker }) {
 
   const load = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/watchlist`)
+      const res = await fetch(`${getApiBase()}/api/watchlist`)
       if (res.ok) {
         const data = await res.json()
         setItems(data.watchlist || [])
@@ -42,7 +42,7 @@ export default function Watchlist({ wsQuotes, onSelectTicker }) {
     setAdding(true)
     setError('')
     try {
-      const res = await fetch(`${API_BASE}/api/watchlist`, {
+      const res = await fetch(`${getApiBase()}/api/watchlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker }),
@@ -65,7 +65,7 @@ export default function Watchlist({ wsQuotes, onSelectTicker }) {
 
   const handleRemove = async (ticker) => {
     try {
-      await fetch(`${API_BASE}/api/watchlist/${ticker}`, { method: 'DELETE' })
+      await fetch(`${getApiBase()}/api/watchlist/${ticker}`, { method: 'DELETE' })
       setItems(prev => prev.filter(i => i.ticker !== ticker))
     } catch (e) {
       console.error('Erreur suppression:', e)

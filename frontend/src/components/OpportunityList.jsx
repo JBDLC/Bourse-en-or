@@ -7,7 +7,7 @@ import { fmt, variationColor, scoreColor, scoreBarColor } from '../utils/formatt
 import SignalBadge from './SignalBadge'
 import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { getApiBase } from '../config/api'
 
 export default function OpportunityList({ wsQuotes, onSelectTicker }) {
   const [recommendations, setRecommendations] = useState([])
@@ -20,7 +20,7 @@ export default function OpportunityList({ wsQuotes, onSelectTicker }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/recommendations?limit=30`)
+        const res = await fetch(`${getApiBase()}/api/recommendations?limit=30`)
         if (res.ok) {
           const data = await res.json()
           setRecommendations(data.recommendations || [])

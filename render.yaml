@@ -32,6 +32,9 @@ services:
         value: 1d
       - key: MAX_TICKERS
         value: "25"
+      # CORS : regex *.onrender.com activée dans le code + URL frontend exacte ici
+      - key: FRONTEND_URL
+        sync: false
       - key: ALLOWED_ORIGINS
         value: '["https://pea-trading-frontend.onrender.com"]'
     healthCheckPath: /api/health
