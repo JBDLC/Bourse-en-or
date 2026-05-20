@@ -3,9 +3,10 @@ config.py — Paramètres centralisés de l'application
 Toutes les variables d'environnement sont lues ici, nulle part ailleurs.
 """
 import json
-from pydantic import field_validator
+import os
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
-from typing import List, Union
+from typing import Any, List, Union
 
 
 class Settings(BaseSettings):
@@ -68,6 +69,30 @@ class Settings(BaseSettings):
 
     # ── Rate limiting ─────────────────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 100
+
+    @model_validator(mode="before")
+    @classmethod
+    def redis_url_from_upstash(cls, data: Any) -> Any:
+        """Accepte UPSTASH_REDIS_URL si REDIS_URL absent (copie depuis Upstash .env)."""
+        if isinstance(data, dict):
+            if not data.get("REDIS_URL") and data.get("UPSTASH_REDIS_URL"):
+                data["REDIS_URL"] = data["UPSTASH_REDIS_URL"]
+            elif not data.get("REDIS_URL"):
+                env = os.getenv("UPSTASH_REDIS_URL") or os.getenv("REDIS_URL", "")
+                if env:
+                    data["REDIS_URL"] = env
+        return data
+
+    @field_validator("REDIS_URL", mode="before")
+    @classmethod
+    def clean_redis_url(cls, v: Any) -> str:
+        if v is None:
+            return ""
+        s = str(v).strip().strip('"').strip("'")
+        # Erreur fréquente Render : coller toute la ligne REDIS_URL="rediss://..."
+        if s.upper().startswith("REDIS_URL="):
+            s = s.split("=", 1)[1].strip().strip('"').strip("'")
+        return s
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod

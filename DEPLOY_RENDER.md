@@ -52,13 +52,29 @@ Le fichier `render.yaml` est deja configure pour un deploy Blueprint de ces 3 re
 - Test API: `https://<backend>.onrender.com/api/quotes`
 - WebSocket: verifie l'etat `LIVE` dans l'UI
 
-## 6) Erreur build pandas / Python 3.14
+## 6) Ecran vide + `"redis": false` dans /api/health
+
+**Cause :** `REDIS_URL` absente, incorrecte, ou sans TLS.
+
+**Fix sur Render (backend → Environment) :**
+
+1. Upstash → base **Bourse en or** → onglet **Details** ou **.env**
+2. Copie **`UPSTASH_REDIS_URL`** ou **Redis URL** (commence par `rediss://`)
+3. Colle dans Render : variable **`REDIS_URL`** (pas `UPSTASH_REDIS_URL`)
+4. Exemple valide : `rediss://default:VOTRE_MOT_DE_PASSE@vast-rabbit-41895.upstash.io:6379`
+5. **Save** puis **Manual Deploy** du backend
+
+**Ne pas utiliser :** l’URL REST `https://...` — uniquement `rediss://`.
+
+Après fix : `/api/health` doit montrer `"redis": true` et `"quotes_cached" > 0` après 2–5 min.
+
+## 7) Erreur build pandas / Python 3.14
 
 Si le build echoue sur la compilation de `pandas` avec `cpython-314`, Render utilise Python 3.14 par defaut.
 Le projet impose **Python 3.11.9** via `runtime.txt` et `PYTHON_VERSION` dans `render.yaml`.
 Push ces fichiers puis redeploy.
 
-## 7) Recommandations de production
+## 8) Recommandations de production
 
 - **Plan**: les plans free conviennent pour test/dev, mais peuvent "sleep".
 - **Redis**: garde Upstash en region proche (Frankfurt) pour latence reduite.

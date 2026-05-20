@@ -15,7 +15,10 @@ import redis.asyncio as aioredis
 
 from backend.config import settings
 from backend.scheduler import start_scheduler, stop_scheduler
-from backend.cache.redis_client import get_redis, close_redis, cache_get, get_all_quotes, get_all_signals, redis_ping
+from backend.cache.redis_client import (
+    get_redis, close_redis, cache_get, get_all_quotes, get_all_signals,
+    redis_ping, get_redis_diagnostic,
+)
 from backend.scheduler import collect_stats
 from backend.collectors.market_data import fetch_indices, TICKER_NAMES
 from backend.analysis.recommender import build_recommendations, get_top_opportunities
@@ -82,7 +85,14 @@ async def redis_listener():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Démarrage PEA Trading Companion...")
+    logger.info(f"Démarrage {settings.APP_NAME}...")
+
+    ok = await redis_ping()
+    if not ok:
+        logger.warning(
+            "Redis injoignable — vérifiez REDIS_URL (Upstash rediss://...). "
+            "Mode mémoire local activé pour les cours."
+        )
 
     # Démarrer le scheduler de collecte
     start_scheduler()
@@ -125,12 +135,33 @@ app.add_middleware(
 async def health():
     quotes = await get_all_quotes()
     redis_ok = await redis_ping()
+    diag = get_redis_diagnostic()
     return {
         "status": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "redis": redis_ok,
+        "redis_diagnostic": diag,
+        "quotes_cached": len(quotes),
+        "memory_quotes": diag.get("memory_quotes", 0),
+        "collect": collect_stats,
+        "hint": (
+            "Si redis=false mais memory_quotes>0, l'app fonctionne sans Redis. "
+            "Si les deux sont 0, la collecte yfinance échoue — voir les logs Render."
+        ),
+    }
+
+
+@app.post("/api/admin/refresh")
+async def force_refresh():
+    """Force une collecte (utile après correction REDIS_URL)."""
+    from backend.scheduler import _collect_and_broadcast
+    await _collect_and_broadcast()
+    quotes = await get_all_quotes()
+    return {
         "quotes_cached": len(quotes),
         "collect": collect_stats,
+        "redis": await redis_ping(),
+        "redis_diagnostic": get_redis_diagnostic(),
     }
 
 
