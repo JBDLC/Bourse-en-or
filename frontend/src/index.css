@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: #0A0E17;
+    color: #E8EDF5;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0A0E17;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1E2D45;
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3D8EFF;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-card border border-bg-border rounded-lg;
+  }
+
+  .num {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .signal-strong-buy  { @apply text-signal-strong_buy; }
+  .signal-buy         { @apply text-signal-buy; }
+  .signal-neutral     { @apply text-signal-neutral; }
+  .signal-avoid       { @apply text-signal-avoid; }
+  .signal-strong-avoid{ @apply text-signal-strong_avoid; }
+
+  .badge-strong-buy   { @apply bg-signal-strong_buy/15 text-signal-strong_buy border border-signal-strong_buy/30; }
+  .badge-buy          { @apply bg-signal-buy/15 text-signal-buy border border-signal-buy/30; }
+  .badge-neutral      { @apply bg-signal-neutral/15 text-signal-neutral border border-signal-neutral/30; }
+  .badge-avoid        { @apply bg-signal-avoid/15 text-signal-avoid border border-signal-avoid/30; }
+  .badge-strong-avoid { @apply bg-signal-strong_avoid/15 text-signal-strong_avoid border border-signal-strong_avoid/30; }
+}

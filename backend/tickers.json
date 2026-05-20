@@ -1,0 +1,66 @@
+{
+  "cac40": [
+    {"ticker": "MC.PA",   "name": "LVMH"},
+    {"ticker": "TTE.PA",  "name": "TotalEnergies"},
+    {"ticker": "SAN.PA",  "name": "Sanofi"},
+    {"ticker": "AIR.PA",  "name": "Airbus"},
+    {"ticker": "BNP.PA",  "name": "BNP Paribas"},
+    {"ticker": "OR.PA",   "name": "L'Oréal"},
+    {"ticker": "SU.PA",   "name": "Schneider Electric"},
+    {"ticker": "RI.PA",   "name": "Pernod Ricard"},
+    {"ticker": "AI.PA",   "name": "Air Liquide"},
+    {"ticker": "KER.PA",  "name": "Kering"},
+    {"ticker": "CAP.PA",  "name": "Capgemini"},
+    {"ticker": "SGO.PA",  "name": "Saint-Gobain"},
+    {"ticker": "BN.PA",   "name": "Danone"},
+    {"ticker": "VIE.PA",  "name": "Veolia"},
+    {"ticker": "ACA.PA",  "name": "Crédit Agricole"},
+    {"ticker": "GLE.PA",  "name": "Société Générale"},
+    {"ticker": "CS.PA",   "name": "AXA"},
+    {"ticker": "EN.PA",   "name": "Bouygues"},
+    {"ticker": "ORA.PA",  "name": "Orange"},
+    {"ticker": "SW.PA",   "name": "Sodexo"}
+  ],
+  "midcap_paris": [
+    {"ticker": "DSY.PA",  "name": "Dassault Systèmes"},
+    {"ticker": "ALO.PA",  "name": "Alstom"},
+    {"ticker": "ERF.PA",  "name": "Eurofins Scientific"},
+    {"ticker": "RMS.PA",  "name": "Hermès"},
+    {"ticker": "PUB.PA",  "name": "Publicis"},
+    {"ticker": "VIV.PA",  "name": "Vivendi"},
+    {"ticker": "LHN.PA",  "name": "LafargeHolcim"},
+    {"ticker": "EL.PA",   "name": "EssilorLuxottica"},
+    {"ticker": "SAF.PA",  "name": "Safran"},
+    {"ticker": "DG.PA",   "name": "Vinci"}
+  ],
+  "europe_pea": [
+    {"ticker": "ASML.AS", "name": "ASML"},
+    {"ticker": "HEIA.AS", "name": "Heineken"},
+    {"ticker": "INGA.AS", "name": "ING Groep"},
+    {"ticker": "SAP.DE",  "name": "SAP"},
+    {"ticker": "SIE.DE",  "name": "Siemens"},
+    {"ticker": "ALV.DE",  "name": "Allianz"},
+    {"ticker": "BAYN.DE", "name": "Bayer"},
+    {"ticker": "BMW.DE",  "name": "BMW"},
+    {"ticker": "VOW3.DE", "name": "Volkswagen"},
+    {"ticker": "DTE.DE",  "name": "Deutsche Telekom"}
+  ],
+  "etf_pea": [
+    {"ticker": "CW8.PA",   "name": "Amundi MSCI World"},
+    {"ticker": "EWLD.PA",  "name": "iShares Core MSCI World"},
+    {"ticker": "CAC.PA",   "name": "Lyxor CAC 40"},
+    {"ticker": "PSP5.PA",  "name": "Amundi S&P 500 ESG"},
+    {"ticker": "PAEEM.PA", "name": "Amundi MSCI Emerging Markets"},
+    {"ticker": "PANX.PA",  "name": "Amundi Nasdaq-100"},
+    {"ticker": "ESE.PA",   "name": "iShares Euro Stoxx 50"}
+  ],
+  "indices_reference": [
+    {"ticker": "^FCHI",   "name": "CAC 40"},
+    {"ticker": "^STOXX50E","name": "Euro Stoxx 50"},
+    {"ticker": "^GDAXI",  "name": "DAX"},
+    {"ticker": "^IBEX",   "name": "IBEX 35"},
+    {"ticker": "^AEX",    "name": "AEX Amsterdam"},
+    {"ticker": "^FTSE",   "name": "FTSE 100"},
+    {"ticker": "^SP500",  "name": "S&P 500 (référence)"}
+  ]
+}
